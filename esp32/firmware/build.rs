@@ -1,6 +1,8 @@
 // Gibt die Link- und Umgebungsdaten von ESP-IDF an Cargo weiter.
 fn main() {
     embuild::espidf::sysenv::output();
+    // used by the board check in src/lib.rs
+    println!("cargo:rustc-check-cfg=cfg(esp_idf_esp_console_usb_serial_jtag)");
     // Entwicklungs-Build mit Testbildern (P2-Nachweis)
     println!("cargo:rustc-check-cfg=cfg(esp32os_testbilder)");
     println!("cargo:rerun-if-env-changed=ESP32OS_TESTBILDER");

@@ -202,3 +202,29 @@ pub fn pruefen(aktuell: &str) -> Result<Option<Freigabe>, String> {
 pub fn installieren(f: &Freigabe, fortschritt: &mut dyn FnMut(u32)) -> Result<(), String> {
     crate::geschuetzt(|| installieren_innen(f, fortschritt))
 }
+
+#[cfg(test)]
+mod board_asset_tests {
+    use super::*;
+
+    /// A release may also carry the Guition files ("guition-..."): the updater
+    /// must never pick one of them.
+    #[test]
+    fn updater_ignores_other_boards_assets() {
+        let asset = |n: &str| format!("{{\"browser_download_url\": \"https://x/{n}\"}}");
+        let json = |names: &[&str]| {
+            format!(
+                "{{\"tag_name\": \"v9\", \"assets\": [{}]}}",
+                names.iter().map(|n| asset(n)).collect::<Vec<_>>().join(",")
+            )
+        };
+        let guition_only = ["guition-esp32os.bin", "guition-esp32os.bin.sha256"];
+        assert!(freigabe_aus_json(&json(&guition_only)).is_err());
+        let both = ["guition-esp32os.bin", "guition-esp32os.bin.sha256", "esp32os.bin", "esp32os.bin.sha256"];
+        let f = freigabe_aus_json(&json(&both)).expect("Waveshare files");
+        assert_eq!(
+            (f.bild_url.as_str(), f.pruef_url.as_str()),
+            ("https://x/esp32os.bin", "https://x/esp32os.bin.sha256")
+        );
+    }
+}

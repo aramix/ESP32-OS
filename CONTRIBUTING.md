@@ -22,7 +22,7 @@ Use the *Bug report* template. The most helpful information is:
 
 ## Development setup
 
-The build currently runs on **Windows only**. Requirements and steps are in the README under [Building](README.md#building). In short:
+Requirements and steps are in the README under [Building](README.md#building). On macOS or Linux use `esp32/firmware/build_flash.sh --board waveshare|guition`; the PC tests are set up for Windows. In short, on Windows (Waveshare):
 
 ```powershell
 python esp32\netsurf\werkzeuge\quellen_holen.py

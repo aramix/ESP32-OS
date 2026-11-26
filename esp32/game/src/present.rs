@@ -26,9 +26,10 @@ pub struct Layout {
     /// Renderauflösung (quer).
     pub w: usize,
     pub h: usize,
-    /// Ganzzahliger Vergrößerungsfaktor (2 bei 640×360, 4 bei 320×180).
-    pub scale: usize,
-    /// Panel (hochkant), z. B. 720×1280.
+    /// Scale factor in sixteenths, the PPA's resolution (32 = ×2 for 640×360
+    /// on 720×1280, 20 = ×1.25 on 480×800).
+    pub scale16: usize,
+    /// Panel (hochkant), z. B. 480×800.
     pub panel_w: usize,
     pub panel_h: usize,
     /// 270° statt 90° gegen den Uhrzeigersinn drehen („Bild drehen“).
@@ -36,11 +37,35 @@ pub struct Layout {
 }
 
 impl Layout {
-    /// Nur für Auflösungen, die das Panel ganzzahlig füllen.
+    /// The largest picture with the same aspect ratio that fits the panel;
+    /// the rest becomes black bars of equal width. Every block must come out
+    /// as a whole number of panel lines, or there would be gaps between them.
     pub fn new(w: usize, h: usize, panel_w: usize, panel_h: usize, flip: bool) -> Self {
-        let scale = (panel_h / w.max(1)).max(1);
-        assert!(w * scale == panel_h && h * scale == panel_w, "kein ganzzahliger Faktor: {w}x{h}");
-        Self { w, h, scale, panel_w, panel_h, flip }
+        let scale16 = (panel_h * 16 / w.max(1)).min(panel_w * 16 / h.max(1));
+        let l = Self { w, h, scale16, panel_w, panel_h, flip };
+        let ganz = |rows: usize| (rows * scale16).is_multiple_of(16);
+        let letzter = |step: usize| if h % step == 0 { step } else { h % step };
+        assert!(
+            (w * scale16).is_multiple_of(16)
+                && [l.strip_rows(), l.chunk_rows()].into_iter().all(|r| ganz(r) && ganz(letzter(r))),
+            "factor {scale16}/16 does not split the strips evenly: {w}x{h}"
+        );
+        l
+    }
+
+    /// `n` source pixels in panel pixels.
+    pub fn scaled(&self, n: usize) -> usize {
+        n * self.scale16 / 16
+    }
+
+    /// Left/right bar with the panel in landscape (along `panel_h`).
+    pub fn margin_long(&self) -> usize {
+        (self.panel_h - self.scaled(self.w)) / 2
+    }
+
+    /// Top/bottom bar with the panel in landscape (along `panel_w`).
+    pub fn margin_short(&self) -> usize {
+        (self.panel_w - self.scaled(self.h)) / 2
     }
 
     /// Zeilen pro Render-Streifen.
@@ -60,17 +85,16 @@ impl Layout {
         (y0, (y0 + r).min(self.h))
     }
 
-    /// Scharfe Vergrößerung durch die CPU (Nearest-Neighbor). Bei Faktor 4
-    /// (320×180) verdoppelt die CPU nur und der PPA vergrößert noch einmal ×2
-    /// (bilinear – auf verdoppelten Pixeln bleibt das fast scharf): 4-mal
-    /// weniger PPA-Aufträge und halbe Kopierarbeit.
+    /// Sharp upscaling by the CPU (nearest neighbour): always ×2. The PPA does
+    /// the rest (bilinear; on doubled pixels it stays nearly sharp, even when
+    /// it scales down again as for ×1.25).
     pub fn cpu_scale(&self) -> usize {
-        if self.scale >= 4 { self.scale / 2 } else { self.scale }
+        2
     }
 
-    /// Restfaktor, den der PPA beim Ausgeben eines Blocks vergrößert.
-    pub fn ppa_scale(&self) -> usize {
-        self.scale / self.cpu_scale()
+    /// The remaining factor (sixteenths) the PPA applies to each block.
+    pub fn ppa_scale16(&self) -> usize {
+        self.scale16 / self.cpu_scale()
     }
 
     /// Quellzeilen pro vergrößertem Block (Nearest-Neighbor um [`Layout::cpu_scale`]).
@@ -84,7 +108,8 @@ impl Layout {
     /// Uhrzeigersinn: quer (X, Y) → hochkant (Y, Breite−1−X); 270°:
     /// (Höhe−1−Y, X).
     pub fn block_offset(&self, y0: usize, y1: usize) -> (usize, usize) {
-        if self.flip { (self.panel_w - y1 * self.scale, 0) } else { (y0 * self.scale, 0) }
+        let (long, short) = (self.margin_long(), self.margin_short());
+        if self.flip { (self.panel_w - short - self.scaled(y1), long) } else { (short + self.scaled(y0), long) }
     }
 }
 
@@ -172,7 +197,7 @@ fn double_row(src: &[u16], r0: &mut [u16], r1: &mut [u16]) {
 }
 
 /// Rechenmodell des PPA (nur für Tests und die PC-Vorschau): Block `bw`×`bh`
-/// aus `src` um `s` vergrößern (Nearest-Neighbor), um 90° (bzw. 270° bei
+/// aus `src` um `s16`/16 skalieren (Nearest-Neighbor), um 90° (bzw. 270° bei
 /// `rot270`) gegen den Uhrzeigersinn drehen und bei (`ox`, `oy`) in das Bild
 /// `dst` (Breite `dw`) schreiben.
 #[allow(clippy::too_many_arguments)]
@@ -180,17 +205,17 @@ pub fn ppa_model(
     src: &[u16],
     bw: usize,
     bh: usize,
-    s: usize,
+    s16: usize,
     rot270: bool,
     dst: &mut [u16],
     dw: usize,
     ox: usize,
     oy: usize,
 ) {
-    let (sw, sh) = (bw * s, bh * s);
+    let (sw, sh) = (bw * s16 / 16, bh * s16 / 16);
     for y in 0..sh {
         for x in 0..sw {
-            let p = src[(y / s) * bw + x / s];
+            let p = src[(y * 16 / s16) * bw + x * 16 / s16];
             let (px, py) = if rot270 { (sh - 1 - y, x) } else { (y, sw - 1 - x) };
             dst[(oy + py) * dw + ox + px] = p;
         }
@@ -342,7 +367,8 @@ mod tests {
         for (w, h) in [(640, 360), (320, 180)] {
             for flip in [false, true] {
                 let l = Layout::new(w, h, 720, 1280, flip);
-                assert_eq!(l.scale, 1280 / w);
+                assert_eq!(l.scale16, 16 * 1280 / w);
+                assert_eq!((l.margin_long(), l.margin_short()), (0, 0));
                 let mut next = 0;
                 let mut cols = vec![false; 720];
                 for k in 0..l.strips() {
@@ -352,7 +378,7 @@ mod tests {
                     next = y1;
                     let (ox, oy) = l.block_offset(y0, y1);
                     assert_eq!(oy, 0);
-                    for c in &mut cols[ox..ox + (y1 - y0) * l.scale] {
+                    for c in &mut cols[ox..ox + l.scaled(y1 - y0)] {
                         assert!(!*c, "Spalte doppelt");
                         *c = true;
                     }
@@ -360,7 +386,34 @@ mod tests {
                 assert_eq!(next, h);
                 assert!(cols.iter().all(|&c| c), "Panel lückenlos");
                 assert!(w * l.cpu_scale() * l.chunk_rows() * l.cpu_scale() <= CHUNK_PX);
-                assert_eq!(l.cpu_scale() * l.ppa_scale(), l.scale);
+                assert_eq!(l.cpu_scale() * l.ppa_scale16(), l.scale16);
+            }
+        }
+    }
+
+    /// Guition JC4880P443C: 640×360 ×1.25 = 800×450 on 480×800, with 15-line
+    /// bars; the blocks cover the 450 columns without gaps.
+    #[test]
+    fn fractional_scale_is_centred_without_gaps() {
+        for (w, h) in [(640, 360), (320, 180)] {
+            for flip in [false, true] {
+                let l = Layout::new(w, h, 480, 800, flip);
+                assert_eq!((l.margin_long(), l.margin_short()), (0, 15));
+                let mut cols = vec![0u8; 480];
+                for k in 0..l.strips() {
+                    let (s0, s1) = l.strip(k);
+                    let mut r0 = s0;
+                    while r0 < s1 {
+                        let r1 = (r0 + l.chunk_rows()).min(s1);
+                        let (ox, oy) = l.block_offset(r0, r1);
+                        assert_eq!(oy, 0);
+                        // how the PPA computes the block height
+                        let out = (r1 - r0) * l.cpu_scale() * l.ppa_scale16() / 16;
+                        cols[ox..ox + out].iter_mut().for_each(|c| *c += 1);
+                        r0 = r1;
+                    }
+                }
+                assert!(cols.iter().enumerate().all(|(x, &n)| n == u8::from((15..465).contains(&x))));
             }
         }
     }
@@ -394,9 +447,9 @@ mod tests {
         assert_eq!(&d[18..], &[4, 4, 5, 5, 6, 6]);
         // 90° gegen den Uhrzeigersinn: oberste Zeile → linke Spalte, von unten.
         let mut out = [0u16; 2 * 3];
-        ppa_model(&src, 3, 2, 1, false, &mut out, 2, 0, 0);
+        ppa_model(&src, 3, 2, 16, false, &mut out, 2, 0, 0);
         assert_eq!(out, [3, 6, 2, 5, 1, 4]);
-        ppa_model(&src, 3, 2, 1, true, &mut out, 2, 0, 0);
+        ppa_model(&src, 3, 2, 16, true, &mut out, 2, 0, 0);
         assert_eq!(out, [4, 1, 5, 2, 6, 3]);
     }
 

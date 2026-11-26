@@ -8,4 +8,4 @@ dependencies:
     version: "1.6.5"
   espressif/esp_hosted:
     version: "3.1.0"
-    override_path: "C:/ec/v3.1.0/espressif__esp_hosted"
+    override_path: "${ESP32OS_EC}/v3.1.0/espressif__esp_hosted"

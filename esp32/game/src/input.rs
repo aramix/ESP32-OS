@@ -2,6 +2,8 @@
 //! BOOT-Knopf der Platine als Menü-/Pausetaste und der Touchscreen
 //! (bis zu zwei Finger: Steuerknüppel und Springen gleichzeitig).
 
+use crate::present::Layout;
+
 /// Bitmasken der Knöpfe.
 pub mod btn {
     /// Vorne (vom Pudding aus gesehen in Blickrichtung der Kamera).
@@ -67,6 +69,10 @@ pub fn panel_to_game(p: (u16, u16), panel_w: u16, panel_h: u16, flip: bool) -> (
 
 /// Wie [`panel_to_game`], aber in ein beliebiges Raster (z. B. 640×360 für
 /// die Spiele der Konsole).
+///
+/// If the raster does not fill the whole panel, it is centred like the picture
+/// ([`crate::present::Layout`]); touches in the black bars count as the
+/// nearest edge pixel.
 pub fn panel_to_raster(p: (u16, u16), panel_w: u16, panel_h: u16, flip: bool, raster: (u16, u16)) -> (u16, u16) {
     let (w, h) = (raster.0.max(1) as i32, raster.1.max(1) as i32);
     let (lw, lh) = (panel_h as i32, panel_w as i32); // quer, z. B. 1280×720
@@ -76,7 +82,11 @@ pub fn panel_to_raster(p: (u16, u16), panel_w: u16, panel_h: u16, flip: bool, ra
         x = lw - 1 - x;
         y = lh - 1 - y;
     }
-    ((x * w / lw).min(w - 1) as u16, (y * h / lh).min(h - 1) as u16)
+    let l = Layout::new(w as usize, h as usize, panel_w as usize, panel_h as usize, flip);
+    let (bw, bh) = (l.scaled(l.w) as i32, l.scaled(l.h) as i32);
+    let x = (x - l.margin_long() as i32).clamp(0, bw - 1);
+    let y = (y - l.margin_short() as i32).clamp(0, bh - 1);
+    ((x * w / bw) as u16, (y * h / bh) as u16)
 }
 
 #[cfg(test)]
@@ -95,5 +105,11 @@ mod tests {
         assert_eq!(panel_to_raster((0, 0), 720, 1280, false, (640, 360)), (639, 0));
         assert_eq!(panel_to_raster((719, 1279), 720, 1280, false, (640, 360)), (0, 359));
         assert_eq!(panel_to_raster((360, 640), 720, 1280, false, (640, 360)), (319, 180));
+        // Guition 480×800: 15-line bars above and below (landscape).
+        assert_eq!(panel_to_raster((15, 799), 480, 800, false, (640, 360)), (0, 0));
+        assert_eq!(panel_to_raster((464, 0), 480, 800, false, (640, 360)), (639, 359));
+        assert_eq!(panel_to_raster((0, 799), 480, 800, false, (640, 360)), (0, 0));
+        assert_eq!(panel_to_raster((479, 0), 480, 800, false, (640, 360)), (639, 359));
+        assert_eq!(panel_to_raster((240, 399), 480, 800, false, (640, 360)), (320, 180));
     }
 }

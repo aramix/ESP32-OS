@@ -53,6 +53,9 @@ log = "0.4"
 # RAM eines anderen.
 [features]
 default = []
+# Guition JC4880P443C_I_W instead of Waveshare (src/board/). Goes with
+# sdkconfig.defaults.guition and partitions_guition.csv (build_flash.sh).
+guition = ["desktop/guition"]
 
 [build-dependencies]
 embuild = "0.33"
@@ -91,4 +94,4 @@ remote_component = { name = "espressif/esp_lcd_touch_gt911", version = "^1.2.1" 
 
 # Doom (doomgeneric, GPL-2): C-Code als Komponente, Anbindung in der Crate `doom`.
 [[package.metadata.esp-idf-sys.extra_components]]
-component_dirs = ["../doom/doomgeneric", "../quake/quakegeneric", "komponenten/esp32os", "../kolibri/kolibri_c", "komponenten/netsurf"]
+component_dirs = ["../doom/doomgeneric", "../quake/quakegeneric", "komponenten/esp32os", "komponenten/esp_lcd_st7701", "../kolibri/kolibri_c", "komponenten/netsurf"]

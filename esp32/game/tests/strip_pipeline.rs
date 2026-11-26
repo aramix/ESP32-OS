@@ -37,7 +37,7 @@ fn reference(app: &mut App) -> Vec<u16> {
     let l = Layout::new(w, h, PANEL_W, PANEL_H, app.settings().flip);
     let mut panel = vec![0u16; PANEL_W * PANEL_H];
     let (ox, oy) = l.block_offset(0, h);
-    ppa_model(&c, w, h, l.scale, l.flip, &mut panel, PANEL_W, ox, oy);
+    ppa_model(&c, w, h, l.scale16, l.flip, &mut panel, PANEL_W, ox, oy);
     panel
 }
 
@@ -66,12 +66,12 @@ fn pipeline(app: &mut App, nearest: bool) -> Vec<u16> {
                 let c = l.cpu_scale();
                 upscale_nearest(&color[(r0 - y0) * w..], w, r1 - r0, c, chunk);
                 let (ox, oy) = l.block_offset(r0, r1);
-                ppa_model(chunk, w * c, (r1 - r0) * c, l.ppa_scale(), l.flip, &mut panel, PANEL_W, ox, oy);
+                ppa_model(chunk, w * c, (r1 - r0) * c, l.ppa_scale16(), l.flip, &mut panel, PANEL_W, ox, oy);
                 r0 = r1;
             }
         } else {
             let (ox, oy) = l.block_offset(y0, y1);
-            ppa_model(&color[..n], w, y1 - y0, l.scale, l.flip, &mut panel, PANEL_W, ox, oy);
+            ppa_model(&color[..n], w, y1 - y0, l.scale16, l.flip, &mut panel, PANEL_W, ox, oy);
         }
     }
     panel

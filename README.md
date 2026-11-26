@@ -26,7 +26,18 @@ Measured on the board (Waveshare ESP32-P4-WIFI6-Touch-LCD-5, chip revision v1.x,
 | Wi-Fi throughput (TCP) | 11.6 Mbit/s to the board, 9.8 Mbit/s from the board | [w8_durchsatz.txt](docs/nachweise/w8_durchsatz.txt) |
 | Endurance | 40 min stability round and 2 × 75 min endurance runs (all programs, menu, browser), 0 crashes, 0 resets | [sb_auswertung.txt](docs/nachweise/sb/sb_auswertung.txt) |
 
+## Supported boards
+
+| Board | Panel | Flash | Install |
+|---|---|---|---|
+| Waveshare ESP32-P4-WIFI6-Touch-LCD-5 (default) | 5" 720×1280 | 32 MB | releases or build from source |
+| Guition JC4880P443C_I_W | 4.3" 480×800 | 16 MB | build from source ([Building](#building)); no release carries its firmware yet |
+
+The screenshots and measurements above are from the Waveshare board.
+
 ## Quick start
+
+This section is for the **Waveshare** board. Do not flash these release files on the Guition.
 
 Install the latest release (1.0.3, chip revision v1.x). The web flasher still installs 1.0.1; update afterwards in *Settings → System → Check for updates*.
 
@@ -71,11 +82,14 @@ Boards with chip revision v3.x and changes to the code: build from source, see [
 - All programs share one address space. A faulty program is stopped and reported, but can still disturb the system.
 - No battery gauge and no camera support yet (planned for 1.1).
 - Release images combine GPL-2.0 code (NetSurf, KolibriOS) with Apache-2.0 code (ESP-IDF). Whether they may be distributed in this form is being clarified; the source code is not affected.
-- The build runs on Windows only.
+- The Windows build script builds for the Waveshare board only; the Guition is built with the macOS/Linux script (tried on macOS only).
+- Guition: no updates over Wi-Fi and a single firmware slot, so there is no previous version to roll back to; about 5.9 MB of internal storage. Sound, the microSD slot and Quake have not been tested on it.
 
 Full list with reasons: `docs/development/PLAN.md`, section "Abweichungen" (German).
 
 ## Hardware
+
+### Waveshare ESP32-P4-WIFI6-Touch-LCD-5
 
 Waveshare ESP32-P4-WIFI6-Touch-LCD-5 ([documentation](https://docs.waveshare.com/ESP32-P4-WIFI6-Touch-LCD-5)):
 
@@ -86,7 +100,32 @@ Waveshare ESP32-P4-WIFI6-Touch-LCD-5 ([documentation](https://docs.waveshare.com
 
 The desktop is drawn at 640×360 and scaled ×2 to the panel in landscape. A 3D-printable case is in [`esp32/gehaeuse/`](esp32/gehaeuse/).
 
+### Guition JC4880P443C_I_W
+
+- ESP32-P4 (tested with chip revision v1.0), 32 MB PSRAM, 16 MB flash
+- ESP32-C6 as Wi-Fi co-processor (SDIO, esp_hosted), 2.4 GHz
+- 4.3" IPS panel 480×800 (MIPI-DSI, ST7701), capacitive touch (GT911)
+- ES8311 audio codec, microSD slot
+- Log and flashing over the P4's USB port (USB Serial/JTAG)
+
+The same 640×360 desktop is scaled ×1.25 to 800×450, with a thin black bar above and below.
+
 ## Building
+
+### macOS or Linux (both boards)
+
+Requirements: Git, Python 3 with Pillow, perl, [rustup](https://rustup.rs), LLVM (`brew install llvm` on macOS) and `cargo install ldproxy espflash --locked`. ESP-IDF 5.5 is downloaded on the first build. Tried on macOS only.
+
+```sh
+cd esp32/firmware
+./build_flash.sh --board guition                                # build all images
+./build_flash.sh --board guition --port /dev/cu.usbmodem101     # build and flash
+./build_flash.sh --board guition --release 1.0.4                # Guition release files (publishes nothing)
+```
+
+Use `--board waveshare` for the Waveshare board (chip revision v1.x). Flashing replaces the firmware and partition table on the board. Doom and Quake also need their game data; without a microSD card, there is no ready-made tool to put it on the internal storage.
+
+### Windows (Waveshare)
 
 Requirements (Windows, PowerShell): Git, Python 3, [rustup](https://rustup.rs), LLVM (`winget install LLVM.LLVM`) and `cargo install ldproxy espflash --locked`. The Rust toolchain is pinned in `esp32/firmware/rust-toolchain.toml`. ESP-IDF 5.5 is downloaded on the first build (1 to 2 GB).
 

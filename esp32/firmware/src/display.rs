@@ -1,4 +1,5 @@
-//! 5″-Display: HX8394, 720×1280 hochkant, MIPI-DSI (2 Lanes), Video-Modus.
+//! Portrait display on MIPI-DSI (2 lanes), video mode; for the panel see
+//! [`crate::board`].
 //!
 //! Der DSI-Controller liest das Bild selbstständig aus einem Bildspeicher im
 //! PSRAM (bei den Waveshare-Zeitwerten rechnerisch 55-mal pro Sekunde; der
@@ -122,18 +123,8 @@ impl Display {
             dpi.video_timing.vsync_back_porch = VSYNC_BACK;
             dpi.video_timing.vsync_front_porch = VSYNC_FRONT;
 
-            // 4) HX8394-Treiber von Waveshare (sendet die Initialisierungsfolge).
-            let mut vendor: sys::hx8394_vendor_config_t = zeroed();
-            vendor.mipi_config.dsi_bus = bus;
-            vendor.mipi_config.dpi_config = &dpi;
-            vendor.mipi_config.lane_num = DSI_LANES;
-            let mut dev: sys::esp_lcd_panel_dev_config_t = zeroed();
-            dev.reset_gpio_num = LCD_RST;
-            dev.bits_per_pixel = 16;
-            dev.flags.set_reset_active_high(1);
-            dev.vendor_config = (&mut vendor as *mut sys::hx8394_vendor_config_t).cast();
-            let mut panel = core::ptr::null_mut();
-            esp!(sys::esp_lcd_new_panel_hx8394(io, &dev, &mut panel))?;
+            // 4) Panel driver (sends the init sequence).
+            let panel = create_panel(bus, io, &dpi)?;
             esp!(sys::esp_lcd_panel_reset(panel))?;
             esp!(sys::esp_lcd_panel_init(panel))?;
             // Nicht jeder Treiber kennt An/Aus – ein Fehler hier ist egal.

@@ -1,0 +1,6 @@
+# Guition JC4880P443C_I_W: adds to or replaces values from sdkconfig.defaults.
+# Use together with --features guition (see build_flash.sh).
+CONFIG_ESPTOOLPY_FLASHSIZE_32MB=n
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+# Log, screenshots and flashing over the P4's USB port
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y

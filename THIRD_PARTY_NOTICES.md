@@ -30,6 +30,7 @@ The original copyright notices in the individual files are kept unchanged.
 | **KolibriOS** – C headers of the ktcc/libc "clayer" (`clayer/*.h`, `sys/socket.h`) and `sys/ksys.h` (converted from the original by `esp32/kolibri/werkzeuge/ksys_nativ.py`) | `esp32/kolibri/include/` | KolibriOS team; Logaev Maxim (turbocat2001) | GPL-2.0 |
 | **doomgeneric** (based on Chocolate Doom and the id Software Doom source) | `esp32/doom/doomgeneric/` | id Software, Inc.; Simon Howard; Ben Ryves (`mus2mid.c`); ozkl (doomgeneric) | GPL-2.0-or-later (`esp32/doom/doomgeneric/LICENSE`) |
 | **quakegeneric** (based on the id Software WinQuake source) | `esp32/quake/quakegeneric/` | id Software, Inc.; the quakegeneric authors – upstream presumably https://github.com/erysdren/quakegeneric (not recorded in the imported files) | GPL-2.0-or-later (`esp32/quake/quakegeneric/LICENSE`) |
+| **esp_lcd_st7701 1.1.3** (LCD driver, from Guition's demo package: init sequence for this panel; panel ID read removed) | `esp32/firmware/komponenten/esp_lcd_st7701/` | Espressif Systems; init sequence: Guition | Apache-2.0 (`license.txt`) |
 
 KolibriOS: https://kolibrios.org, source https://git.kolibrios.org/KolibriOS/kolibrios.
 The ESP32-OS kernel (`esp32/kern`) re-implements the KolibriOS system

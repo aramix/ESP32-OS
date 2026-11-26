@@ -7,9 +7,11 @@
 <!-- ESP Web Tools (Apache-2.0): flashing from the browser over Web Serial -->
 <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
 <style>
-  :root { --text: #1d2330; --muted: #5a6475; --bg: #f6f7f9; --card: #ffffff; --accent: #2f6fd6; --warn: #8a5a00; --warnbg: #fff4dd; }
+  :root { --text: #1d2330; --muted: #5a6475; --bg: #f6f7f9; --card: #ffffff; --accent: #2f6fd6; --warn: #8a5a00; --warnbg: #fff4dd;
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%235a6475' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
   @media (prefers-color-scheme: dark) {
-    :root { --text: #e6e9ef; --muted: #a5adbb; --bg: #14171c; --card: #1d2129; --accent: #6d9cf0; --warn: #ffd27a; --warnbg: #3a2e12; }
+    :root { --text: #e6e9ef; --muted: #a5adbb; --bg: #14171c; --card: #1d2129; --accent: #6d9cf0; --warn: #ffd27a; --warnbg: #3a2e12;
+      --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%23a5adbb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
   }
   body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
   main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
@@ -23,26 +25,43 @@
   code { font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
   a { color: var(--accent); }
   esp-web-install-button { display: inline-block; margin: 8px 0 4px; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; }
+  /* own chevron: the native one sits against the border */
+  select { appearance: none; -webkit-appearance: none; box-sizing: border-box; width: 100%; margin-bottom: 12px; padding: 9px 40px 9px 12px; font: inherit; text-overflow: ellipsis; color: var(--text); background: var(--bg) var(--chevron) no-repeat right 14px center / 12px 8px; border: 1px solid var(--muted); border-radius: 8px; cursor: pointer; }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <main>
   <h1>ESP32-OS Web Flasher</h1>
-  <p class="sub">Install ESP32-OS on a Waveshare ESP32-P4-WIFI6-Touch-LCD-5 directly from your browser.</p>
+  <p class="sub">Install ESP32-OS on your board directly from your browser.</p>
 
   <div class="card">
     <h2>Install</h2>
-    <esp-web-install-button manifest="firmware/manifest.json">
-      <span slot="unsupported">Your browser does not support Web Serial. Please use Chrome or Edge on a desktop computer.</span>
-      <span slot="not-allowed">Web Serial needs a secure connection (https).</span>
-    </esp-web-install-button>
-    <ol>
-      <li>Connect the board's <strong>USB TO UART</strong> port to your computer.</li>
-      <li>Click <em>Connect</em> and pick the serial port of the board.</li>
-      <li>If the board is not detected: hold <strong>BOOT</strong>, press <strong>RESET</strong>, release <strong>BOOT</strong>, then try again.</li>
-      <li>After flashing, press <strong>RESET</strong>. The first start opens the setup assistant (language, keyboard, Wi-Fi).</li>
-    </ol>
-    <p class="warn">Choosing <em>Erase device</em> deletes everything on the internal flash, including saved settings, Wi-Fi networks and game saves. Without erasing, ESP32-OS, Doom and Quake are replaced and your data partition is kept.</p>
+    <!-- No preselection: both boards use an ESP32-P4, so the flasher cannot
+         tell them apart, and the wrong image leaves the screen dark. -->
+    <label for="board">Choose your board</label>
+    <select id="board">
+      <option value="" selected disabled>Select a board...</option>
+      <option value="waveshare" data-manifest="firmware/manifest.json">Waveshare ESP32-P4-WIFI6-Touch-LCD-5 (5", 720×1280, 32 MB)</option>
+      <option value="guition" data-manifest="firmware/guition-manifest.json">Guition JC4880P443C_I_W (4.3", 480×800, 16 MB)</option>
+    </select>
+    <p id="choose">Check the name of your board, then select it above.</p>
+    <div id="install" hidden>
+      <esp-web-install-button id="button">
+        <span slot="unsupported">Your browser does not support Web Serial. Please use Chrome or Edge on a desktop computer.</span>
+        <span slot="not-allowed">Web Serial needs a secure connection (https).</span>
+      </esp-web-install-button>
+      <ol>
+        <li data-board="waveshare">Connect the board's <strong>USB TO UART</strong> port to your computer.</li>
+        <li data-board="guition">Connect the board's USB port to your computer. Use the one that shows up as <strong>USB JTAG/serial debug unit</strong>.</li>
+        <li>Click <em>Connect</em> and pick the serial port of the board.</li>
+        <li>If the board is not detected: hold <strong>BOOT</strong>, press <strong>RESET</strong>, release <strong>BOOT</strong>, then try again.</li>
+        <li>After flashing, press <strong>RESET</strong>. The first start opens the setup assistant (language, keyboard, Wi-Fi).</li>
+      </ol>
+      <p class="warn">Choosing <em>Erase device</em> deletes everything on the internal flash, including saved settings, Wi-Fi networks and game saves. Without erasing, ESP32-OS, Doom and Quake are replaced and the data partition of an earlier ESP32-OS is kept. Other firmware on the board is overwritten.</p>
+      <p class="warn" data-board="guition">Guition: updates over Wi-Fi are not available. Install new versions with this page.</p>
+    </div>
   </div>
 
   <div class="card">
@@ -54,17 +73,51 @@
     </ul>
   </div>
 
-  <div class="card">
+  <div class="card" id="manual" hidden>
     <h2>Manual flashing</h2>
     <p>With <a href="https://github.com/esp-rs/espflash">espflash</a> and the files of the release:</p>
-    <p><code>espflash write-bin 0x2000 bootloader.bin</code><br>
+    <p data-board="waveshare"><code>espflash write-bin 0x2000 bootloader.bin</code><br>
        <code>espflash write-bin 0x8000 partition-table.bin</code><br>
        <code>espflash write-bin 0x10000 otadata-leer.bin</code><br>
        <code>espflash write-bin 0x20000 esp32os.bin</code><br>
        <code>espflash write-bin 0xC00000 doomapp.bin</code><br>
        <code>espflash write-bin 0xE00000 quakeapp.bin</code></p>
-    <p>Check the files against <code>SHA256SUMS</code> from the release first.</p>
+    <p data-board="guition"><code>espflash write-bin 0x2000 guition-bootloader.bin</code><br>
+       <code>espflash write-bin 0x8000 guition-partition-table.bin</code><br>
+       <code>espflash write-bin 0x10000 guition-otadata-leer.bin</code><br>
+       <code>espflash write-bin 0x20000 guition-esp32os.bin</code><br>
+       <code>espflash write-bin 0x610000 guition-doomapp.bin</code><br>
+       <code>espflash write-bin 0x810000 guition-quakeapp.bin</code></p>
+    <p>Check the files against <code data-board="waveshare">SHA256SUMS</code><code data-board="guition">guition-SHA256SUMS</code> from the release first.</p>
   </div>
+
+  <script>
+    const select = document.getElementById('board');
+    const show = () => {
+      const option = select.selectedOptions[0];
+      const board = option && !option.disabled ? option : null;
+      document.getElementById('install').hidden = !board;
+      document.getElementById('manual').hidden = !board;
+      document.getElementById('choose').hidden = !!board;
+      if (!board) return;
+      document.getElementById('button').setAttribute('manifest', board.dataset.manifest);
+      for (const el of document.querySelectorAll('[data-board]')) el.hidden = el.dataset.board !== board.value;
+    };
+    select.addEventListener('change', show);
+    // a release may carry firmware for only one of the boards
+    for (const option of select.querySelectorAll('option[data-manifest]')) {
+      fetch(option.dataset.manifest, { method: 'HEAD' }).then((r) => {
+        if (r.status === 404) {
+          if (option.selected) select.value = '';
+          option.disabled = true;
+          option.textContent += ' - no firmware in the current release';
+          show();
+        }
+      }).catch(() => {});
+    }
+    // the browser may restore a selection after a reload
+    show();
+  </script>
 
   <p class="sub">ESP32-OS is an experimental hobby project. Source code and licenses: <a href="https://github.com/TheUnkn0wnC0DE/ESP32-OS">github.com/TheUnkn0wnC0DE/ESP32-OS</a>.</p>
 </main>

@@ -1,7 +1,6 @@
-//! Touch GT911 über den ESP-IDF-Treiber `espressif/esp_lcd_touch_gt911`
-//! (eingerichtet wie im Board-Support-Paket von Waveshare: Adresse 0x5D,
-//! sonst 0x14; Reset nicht angeschlossen; 720×1280 ohne Tauschen oder
-//! Spiegeln).
+//! GT911 touch through the ESP-IDF driver `espressif/esp_lcd_touch_gt911`
+//! (address 0x5D, else 0x14; reset not used; panel coordinates without
+//! swapping or mirroring).
 //!
 //! [`TouchReader`] fragt den Controller in einem eigenen Thread ab – alle
 //! [`TOUCH_POLL_MS`] ms oder, falls [`TOUCH_INT`] eingetragen ist, sobald der
@@ -162,7 +161,7 @@ impl Touch {
         }
     }
 
-    /// Berührungen in Panel-Koordinaten (hochkant, 720×1280).
+    /// Touches in panel coordinates (portrait).
     pub fn read(&mut self) -> Points {
         if ROH {
             self.roh_protokollieren();

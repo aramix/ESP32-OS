@@ -1,6 +1,6 @@
-//! Hardware-Anbindung für das Waveshare ESP32-P4-WIFI6-Touch-LCD-5 –
-//! gemeinsam für das Spiel (`src/main.rs`) und das Testprogramm
-//! (`src/bin/hwtest.rs`). Treiber kommen aus ESP-IDF (über `esp-idf-svc`).
+//! Hardware layer for the supported boards (see [`board`]), shared by the game
+//! (`src/main.rs`) and the test program (`src/bin/hwtest.rs`). Drivers come
+//! from ESP-IDF (through `esp-idf-svc`).
 
 pub mod absturz;
 pub mod audio;
@@ -19,6 +19,7 @@ pub mod i2c;
 pub mod jpeg;
 pub mod knopfsuche;
 pub mod kern_board;
+pub mod serial;
 pub mod pipeline;
 pub mod slots;
 pub mod speicher;
@@ -33,6 +34,13 @@ pub mod touch;
 pub mod umzug;
 pub mod update;
 pub mod wlan;
+
+// The `guition` feature and the ESP-IDF settings must match (console and flash
+// size), or the board would stay silent or not boot.
+#[cfg(all(feature = "guition", not(esp_idf_esp_console_usb_serial_jtag)))]
+compile_error!("--features guition needs sdkconfig.defaults.guition (ESP_IDF_SDKCONFIG_DEFAULTS, see build_flash.sh)");
+#[cfg(all(not(feature = "guition"), esp_idf_esp_console_usb_serial_jtag))]
+compile_error!("sdkconfig.defaults.guition is only for --features guition");
 
 use board::*;
 use esp_idf_svc::sys::EspError;

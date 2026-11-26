@@ -11,6 +11,9 @@ rustflags = ["--cfg", "espidf_time64", "-C", "link-arg=-Wl,--wrap=esp_panic_hand
 build-std = ["std", "panic_abort"]
 
 [env]
+# Where the trimmed components live (komponenten/esp32os/idf_component.yml);
+# on macOS/Linux build_flash.sh sets its own path
+ESP32OS_EC = "C:/ec"
 MCU = "esp32p4"
 # Die ESP-IDF-Version, mit der Waveshare die Beispiele dieser Platine baut.
 ESP_IDF_VERSION = "v5.5.5"

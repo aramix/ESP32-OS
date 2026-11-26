@@ -14,6 +14,10 @@ kolibri = { path = "../kolibri" }
 # landet nicht in der Firmware)
 miniz_oxide = { version = "0.9", default-features = false, features = ["with-alloc"] }
 
+[features]
+# Guition JC4880P443C_I_W (board name in the About dialog)
+guition = []
+
 [dependencies]
 kern = { path = "../kern" }
 kolibri = { path = "../kolibri" }

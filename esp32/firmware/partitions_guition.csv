@@ -1,0 +1,15 @@
+# Name,     Type, SubType,   Offset,     Size
+# Guition JC4880P443C_I_W, 16 MB flash:
+# * one slot for ESP32-OS. Updates over Wi-Fi are off (the releases are built
+#   for the Waveshare board), so no second slot is needed.
+# * Doom and Quake are separate programs (they use no internal RAM in the
+#   others); OTA subtypes must count up from ota_0 without gaps.
+# * daten: FAT with wear levelling, ~5.9 MB: settings, Würfelwelt, Doom and
+#   Quake configuration. Game data is better kept on the SD card.
+nvs,        data, nvs,       0x9000,     0x6000
+phy_init,   data, phy,       0xf000,     0x1000
+otadata,    data, ota,       0x10000,    0x2000
+esp32os_a,  app,  ota_0,     0x20000,    0x5F0000
+doomapp,    app,  ota_1,     0x610000,   0x200000
+quakeapp,   app,  ota_2,     0x810000,   0x200000
+daten,      data, fat,       0xA10000,   0x5F0000

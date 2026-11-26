@@ -436,7 +436,7 @@ impl CoreCtx {
                     _ => (self.chunk, ci),
                 };
                 let src = &blk[j * platz..j * platz + (y1 - y0) * f.w];
-                self.submit(ci, src, f.w, y1 - y0, l.scale as f32, f.flip, f.fb, ox, oy);
+                self.submit(ci, src, f.w, y1 - y0, l.scale16 as f32 / 16.0, f.flip, f.fb, ox, oy);
                 st.output_us += (now_us() - t2) as u32;
                 continue;
             }
@@ -480,7 +480,7 @@ impl CoreCtx {
                     (Some(b), true) => b,
                     _ => self.chunk,
                 };
-                self.submit(slot, &src[..bw * bh], bw, bh, l.ppa_scale() as f32, f.flip, f.fb, ox, oy);
+                self.submit(slot, &src[..bw * bh], bw, bh, l.ppa_scale16() as f32 / 16.0, f.flip, f.fb, ox, oy);
                 st.scale_us += (t5 - t4) as u32;
                 st.output_us += ((t4 - t3) + (now_us() - t5)) as u32;
                 r0 = r1;

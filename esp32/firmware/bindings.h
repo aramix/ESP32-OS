@@ -1,5 +1,6 @@
 // Zusätzliche C-Schnittstellen für die Rust-Bindungen (esp-idf-sys).
 #include "esp_lcd_hx8394.h"
+#include "esp_lcd_st7701.h" // Guition
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_io_i2c.h"
@@ -10,6 +11,8 @@
 #include "driver/i2c_master.h"
 #include "driver/i2s_std.h"
 #include "driver/ledc.h"
+#include "driver/usb_serial_jtag.h"
+#include "driver/usb_serial_jtag_vfs.h"
 #include "driver/gpio.h"
 #include "esp_adc/adc_oneshot.h"
 #include "esp_adc/adc_cali_scheme.h"

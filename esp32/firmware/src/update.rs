@@ -6,11 +6,12 @@
 use core::ffi::{c_char, c_int, c_void};
 use std::ffi::CString;
 
-/// Repository der Releases (O8); beim Bauen änderbar mit
-/// `ESP32OS_UPDATE_REPO=besitzer/name`.
-pub const REPO: &str = match option_env!("ESP32OS_UPDATE_REPO") {
-    Some(r) => r,
-    None => "TheUnkn0wnC0DE/ESP32-OS",
+/// Release repository, per board ([`crate::board::UPDATE_REPO`]); override at
+/// build time with `ESP32OS_UPDATE_REPO=owner/name`. Without one there are no
+/// updates over Wi-Fi.
+pub const REPO: Option<&str> = match option_env!("ESP32OS_UPDATE_REPO") {
+    Some(r) => Some(r),
+    None => crate::board::UPDATE_REPO,
 };
 
 unsafe extern "C" {
@@ -93,7 +94,8 @@ impl kern::aktualisierung::Quelle for GitHub {
         if !kern::wlan::zustand().verbunden {
             return Err(kern::sprache::t("No Wi-Fi connection", "Keine WLAN-Verbindung").into());
         }
-        let url = format!("https://api.github.com/repos/{REPO}/releases/latest");
+        let repo = REPO.ok_or("ESP32OS_UPDATE_REPO")?;
+        let url = format!("https://api.github.com/repos/{repo}/releases/latest");
         let (status, json) = https_text(&url, true)?;
         log::info!("UPDATE: Abfrage {url}: HTTP {status}, {} Byte", json.len());
         match status {

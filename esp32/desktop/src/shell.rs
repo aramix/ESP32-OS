@@ -952,6 +952,11 @@ pub fn absturz_melden(programm: &str, grund: &str) {
 
 // ------------------------------------------------------------ info
 
+#[cfg(not(feature = "guition"))]
+const BOARD_NAME: &str = "Waveshare ESP32-P4-WIFI6-Touch-LCD-5";
+#[cfg(feature = "guition")]
+const BOARD_NAME: &str = "Guition JC4880P443C_I_W";
+
 /// Info-Dialog „Über ESP32-OS“.
 pub fn info() {
     let programme = kern::liste().len();
@@ -959,7 +964,7 @@ pub fn info() {
         format!("Version {VERSION}"),
         kern::sprache::t("KolibriOS system functions native,", "KolibriOS-Systemfunktionen nativ,").to_string(),
         kern::sprache::t("without emulator", "ohne Emulator").to_string(),
-        "Waveshare ESP32-P4-WIFI6-Touch-LCD-5".to_string(),
+        BOARD_NAME.to_string(),
         format!("{} {programme}", kern::sprache::t("Running programs:", "Laufende Programme:")),
         kern::sprache::t("KolibriOS parts: GPL-2.0 (LICENSE)", "KolibriOS-Teile: GPL-2.0 (LICENSE)").to_string(),
     ];

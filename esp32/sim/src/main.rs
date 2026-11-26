@@ -550,7 +550,7 @@ fn testbild(dir: &Path) -> std::io::Result<()> {
     let l = Layout::new(w, h, 720, 1280, false);
     let mut panel = vec![0u16; 720 * 1280];
     let (ox, oy) = l.block_offset(0, h);
-    ppa_model(&c, w, h, l.scale, false, &mut panel, 720, ox, oy);
+    ppa_model(&c, w, h, l.scale16, false, &mut panel, 720, ox, oy);
     let rgb: Vec<u32> = panel.iter().map(|&p| to_rgb888(p)).collect();
     let p2 = dir.join("testbild_panel_720x1280.png");
     std::fs::write(&p2, spatz::image::encode_png(720, 1280, &rgb))?;

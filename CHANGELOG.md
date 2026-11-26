@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- New board: Guition JC4880P443C_I_W (4.3" 480×800 ST7701, 16 MB flash), selected at build time; the Waveshare board stays the default. On the Guition the 640×360 desktop is shown scaled ×1.25 with black bars, log and flashing use the USB Serial/JTAG port, and updates over Wi-Fi are off. New build script for macOS/Linux: `esp32/firmware/build_flash.sh --board guition|waveshare`.
+- Web flasher: choose the board before installing.
+
 ## 1.0.4 (not released yet)
 
 - Weather: new app with current weather and a 5-day forecast from Open-Meteo (no API key). Choose the place by touch in the app or in *Settings → Weather place*; without Wi-Fi it says so. Icon on the desktop and in the Start menu.

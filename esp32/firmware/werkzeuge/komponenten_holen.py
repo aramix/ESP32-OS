@@ -15,12 +15,15 @@ Doku und Werkzeuge nach `C:/ec/v<version>/espressif__<name>` entpacken.
 """
 import hashlib
 import io
+import os
 import sys
 import urllib.request
 import zipfile
 from pathlib import Path
 
-ZIEL = Path("C:/ec")
+# Windows: the short path C:/ec; elsewhere in the home directory. `ESP32OS_EC`
+# must also be set when building (komponenten/esp32os/idf_component.yml).
+ZIEL = Path(os.environ.get("ESP32OS_EC") or ("C:/ec" if os.name == "nt" else Path.home() / ".cache/esp32os/ec"))
 
 # Name, Version, SHA-256 des Registry-Archivs
 KOMPONENTEN = [

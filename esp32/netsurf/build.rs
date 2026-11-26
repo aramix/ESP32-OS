@@ -399,6 +399,12 @@ fn main() {
     // Für das Board: dieselben Gruppen als CMake-Liste (mit eigenen
     // erzeugten Köpfen neben der Liste)
     board_liste(&q);
+    // The PC tests only run on Windows. Elsewhere the board build just needs
+    // the list: `NETSURF_LIST_ONLY=1 cargo build -p netsurf`
+    println!("cargo:rerun-if-env-changed=NETSURF_LIST_ONLY");
+    if std::env::var_os("NETSURF_LIST_ONLY").is_some() {
+        return;
+    }
 
     // 32 Bit (i686-PC-Tests): NetSurf als ESP32-OS-Programm
     let programm = ziel_32();

@@ -52,21 +52,14 @@
 //! **Akku:** Die Platine lädt den Akku selbst, misst die Spannung aber nicht
 //! an einem GPIO. Optional: eigener Spannungsteiler an GPIO 21 ([`BATTERY`]).
 
-/// I²C-Bus 1 (wie im Board-Support-Paket, 400 kHz).
-pub const I2C_PORT: i32 = 1;
-pub const I2C_SDA: i32 = 7;
-pub const I2C_SCL: i32 = 8;
-pub const I2C_HZ: u32 = 400_000;
+use crate::hw::zeroed;
+use esp_idf_svc::sys::{self, EspError, esp};
 
-/// ES8311 (`ES8311_CODEC_DEFAULT_ADDR`, 7 Bit).
-pub const ADDR_CODEC: u8 = 0x18;
-/// GT911: Standard- und Ersatzadresse (wie im Board-Support-Paket geprüft).
-pub const ADDR_TOUCH: [u8; 2] = [0x5D, 0x14];
+/// Release repository for updates over Wi-Fi.
+pub const UPDATE_REPO: Option<&str> = Some("TheUnkn0wnC0DE/ESP32-OS");
+/// Screen colour at startup, until the first frame arrives.
+pub const BOOT_COLOR: u32 = 0x2A1030;
 
-/// Touch abfragen: alle 4 ms (250-mal pro Sekunde, eigener Thread). Der GT911
-/// liefert selbst neue Daten etwa alle 10 ms; so geht keine Messung verloren
-/// und kurzes Antippen zwischen zwei Bildern wird trotzdem erkannt.
-pub const TOUCH_POLL_MS: u32 = 4;
 /// Touch-Interrupt: laut `IO.md` an GPIO 2, aber nur über einen optionalen
 /// Widerstand – ob er bestückt ist, ist nicht dokumentiert. Daher aus; der
 /// Treiber fragt dann im Takt [`TOUCH_POLL_MS`] ab. `hwtest` zählt, ob GPIO 2
@@ -75,11 +68,7 @@ pub const TOUCH_INT: Option<i32> = None;
 /// Wird von `hwtest` beobachtet (siehe [`TOUCH_INT`]).
 pub const TOUCH_INT_CANDIDATE: i32 = 2;
 
-/// I²S zum ES8311.
-pub const I2S_MCLK: i32 = 13;
-pub const I2S_BCLK: i32 = 12;
-pub const I2S_WS: i32 = 10;
-pub const I2S_DOUT: i32 = 9;
+/// Amplifier enable (high = on).
 pub const PA_EN: i32 = 53;
 
 /// Display: HX8394, 720×1280 hochkant, MIPI-DSI.
@@ -87,10 +76,7 @@ pub const LCD_W: usize = 720;
 pub const LCD_H: usize = 1280;
 pub const LCD_RST: i32 = 27;
 pub const LCD_BACKLIGHT: i32 = 26;
-pub const DSI_LANES: u8 = 2;
 pub const DSI_LANE_MBPS: u32 = 700;
-pub const DSI_PHY_LDO_CHAN: i32 = 3;
-pub const DSI_PHY_LDO_MV: i32 = 2500;
 /// Zeitverhalten aus `HX8394_720_1280_PANEL_30HZ_DPI_CONFIG` des
 /// Waveshare-Treibers: 58 MHz Pixeltakt bei (720+20+20+40) × (1280+4+10+24)
 /// = 800 × 1318 Takten → rechnerisch 55,0 Bilder pro Sekunde.
@@ -101,43 +87,26 @@ pub const HSYNC_FRONT: u32 = 40;
 pub const VSYNC_PULSE: u32 = 4;
 pub const VSYNC_BACK: u32 = 10;
 pub const VSYNC_FRONT: u32 = 24;
-/// Rechnerische Bildwiederholrate (≈ 55,0 Hz); die Firmware misst nach.
-pub const PANEL_HZ: f32 = DPI_CLOCK_MHZ * 1.0e6
-    / (((LCD_W as u32 + HSYNC_PULSE + HSYNC_BACK + HSYNC_FRONT)
-        * (LCD_H as u32 + VSYNC_PULSE + VSYNC_BACK + VSYNC_FRONT)) as f32);
-/// Zeitbudget pro Bild bei dieser Rate (≈ 18,2 ms).
-pub const FRAME_BUDGET_MS: f32 = 1000.0 / PANEL_HZ;
-
-/// Knöpfe an der Leiste – **aus**, solange nur per Touch gespielt wird.
-/// Nach dem Anlöten auf `true` setzen (Pins siehe unten und oben).
-pub const BUTTONS_ENABLED: bool = false;
-/// Knöpfe (aktiv low, interner Pull-up): GPIO 48–52.
-pub const BTN_UP: i32 = 49;
-pub const BTN_DOWN: i32 = 50;
-pub const BTN_LEFT: i32 = 51;
-pub const BTN_RIGHT: i32 = 52;
-pub const BTN_JUMP: i32 = 48;
-/// BOOT-Knopf als Pause/Zurück – erst eintragen, wenn `hwtest` bestätigt
-/// hat, an welchem GPIO er hängt (siehe oben). Wirkt auch ohne
-/// [`BUTTONS_ENABLED`].
-pub const BTN_MENU: Option<i32> = None;
-/// Wird von `hwtest` angezeigt, um den BOOT-Knopf zu finden.
-pub const BOOT_CANDIDATE: i32 = 35;
-
-/// Akkuspannung über einen Spannungsteiler an einem ADC-Pin.
-#[derive(Clone, Copy, Debug)]
-pub struct BatterySense {
-    pub gpio: i32,
-    /// Akkuspannung / Pinspannung, z. B. (200 kΩ + 100 kΩ) / 100 kΩ = 3.
-    pub divider: f32,
+/// Waveshare's HX8394 driver (sends the init sequence).
+///
+/// # Safety
+/// `bus` and `io` belong to the DSI bus; `dpi` lives until the call returns.
+pub unsafe fn create_panel(
+    bus: sys::esp_lcd_dsi_bus_handle_t,
+    io: sys::esp_lcd_panel_io_handle_t,
+    dpi: &sys::esp_lcd_dpi_panel_config_t,
+) -> Result<sys::esp_lcd_panel_handle_t, EspError> {
+    let mut vendor: sys::hx8394_vendor_config_t = zeroed();
+    vendor.mipi_config.dsi_bus = bus;
+    vendor.mipi_config.dpi_config = dpi;
+    vendor.mipi_config.lane_num = super::DSI_LANES;
+    let mut dev: sys::esp_lcd_panel_dev_config_t = zeroed();
+    dev.reset_gpio_num = LCD_RST;
+    dev.bits_per_pixel = 16;
+    dev.flags.set_reset_active_high(1);
+    dev.vendor_config = (&mut vendor as *mut sys::hx8394_vendor_config_t).cast();
+    let mut panel = core::ptr::null_mut();
+    // SAFETY: see above; the configurations live during the call.
+    esp!(unsafe { sys::esp_lcd_new_panel_hx8394(io, &dev, &mut panel) })?;
+    Ok(panel)
 }
-
-/// Vorschlag (siehe README, „Akkuanzeige“): GPIO 21 = Leisten-Pin 15,
-/// ADC1 Kanal 5; Akku+ → 200 kΩ → Pin 15 → 100 kΩ → GND (Pin 13),
-/// 100 nF parallel zu den 100 kΩ. Bei 4,2 V liegen am Pin 1,4 V.
-pub const BATTERY_SUGGESTED: BatterySense = BatterySense { gpio: 21, divider: 3.0 };
-
-/// Akkuanzeige – **aus**, bis der Spannungsteiler eingelötet ist. Danach:
-/// `Some(BATTERY_SUGGESTED)` (und `divider` ggf. mit einem Multimeter
-/// nachjustieren: 3,0 × gemessene Akkuspannung ÷ angezeigte Spannung).
-pub const BATTERY: Option<BatterySense> = None;
